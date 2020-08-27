@@ -1,4 +1,4 @@
-module scrapeWatch
+module github.com/sp0x/scrapeWatch
 
 go 1.14
 
