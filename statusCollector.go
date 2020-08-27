@@ -26,8 +26,8 @@ type FirebaseConfig struct {
 }
 
 func GetFirebaseConfig() (*FirebaseConfig, error) {
-	project := viper.GetString("firebase_project")
-	creds := viper.GetString("firebase_credentials_file")
+	project := viper.GetString("GOOGLE_CLOUD_PROJECT")
+	creds := viper.GetString("GOOGLE_APPLICATION_CREDENTIALS")
 	if creds == "" {
 		return nil, errors.New("no firebase credentials found")
 	}
@@ -70,13 +70,13 @@ func initialize() {
 		return
 	}
 	initialized = true
+	BindConfig()
 	fb, err := NewFirebaseFromEnv()
 	if err != nil {
 		fmt.Printf("error initializing firestore: %v", err)
 		os.Exit(1)
 	}
 	firebase = fb
-
 }
 
 // HelloPubSub consumes a Pub/Sub message.
