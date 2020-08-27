@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
-	"log"
 	"os"
 )
 
@@ -83,6 +82,6 @@ func initialize() {
 func NonErrorStatusReceived(ctx context.Context, m PubSubMessage) error {
 	name := string(m.Data) // Automatically decoded from base64.
 	initialize()
-	log.Printf(name)
+	fmt.Printf(name)
 	return nil
 }
