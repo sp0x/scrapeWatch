@@ -1,0 +1,17 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - functions
+      - deploy
+      - scrapeWatch
+      - --source=.
+      - --entry-point
+      - NonErrorStatusReceived
+      - --runtime
+      - go113
+      - --trigger-topic
+      - scrapescheme
+      - --allow-unauthenticated
+      - --set-env-vars=GOOGLE_CLOUD_PROJECT=demoproject-280919
+    env: ['GOPATH=/gopath']
+    dir: './'
