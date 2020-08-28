@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
-	"os"
 )
 
 func BindConfig() {
@@ -73,7 +72,7 @@ func initialize() {
 	fb, err := NewFirebaseFromEnv()
 	if err != nil {
 		fmt.Printf("error initializing firestore: %v", err)
-		os.Exit(1)
+		//os.Exit(1)
 	}
 	firebase = fb
 }
