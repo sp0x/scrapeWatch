@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 	torrentdStatus "github.com/sp0x/torrentd/indexer/status"
 	"github.com/spf13/viper"
@@ -18,6 +17,7 @@ import (
 func BindConfig() {
 	viper.AutomaticEnv()
 	_ = viper.BindEnv("firebase_credentials_file")
+	_ = viper.BindEnv("verbose")
 }
 
 type FirebaseConfig struct {
@@ -68,6 +68,10 @@ func initialize() {
 	}
 	initialized = true
 	BindConfig()
+	verbose := viper.GetString("verbose")
+	if verbose == "true" {
+		log.SetLevel(log.DebugLevel)
+	}
 	fb, err := NewFirebaseFromEnv()
 	if err != nil {
 		fmt.Printf("error initializing firestore: %v\n", err)
@@ -83,7 +87,6 @@ func NonErrorStatusReceived(ctx context.Context, m PubSubMessage) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(spew.Sdump(message))
 	err = storeStatus(ctx, &message)
 	if err != nil {
 		log.Error(err)
@@ -97,8 +100,10 @@ func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessag
 		return errors.New("firebase not initialized")
 	}
 	schemes := firebase.Collection("schemes")
-	schemeDoc := schemes.Doc(getSchemeKey(message))
+	schemeKey := getSchemeKey(message)
+	schemeDoc := schemes.Doc(schemeKey)
 	_, err = schemeDoc.Create(ctx, message)
+
 	if err != nil && status.Code(err) == codes.AlreadyExists {
 		existing, err := schemeDoc.Get(ctx)
 		if err != nil {
@@ -112,8 +117,15 @@ func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessag
 		existingScheme.ResultsFound += message.ResultsFound
 		existingScheme.Code = message.Code
 		_, err = schemeDoc.Set(ctx, &existing)
+		if err != nil {
+			log.Debugf("Updated existing document %v.", schemeKey)
+		}
+		return err
+	} else if err != nil {
 		return err
 	}
+	log.Debugf("Created new document %v.", schemeKey)
+
 	return err
 }
 
