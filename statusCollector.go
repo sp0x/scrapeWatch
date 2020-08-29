@@ -7,14 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/sp0x/torrentd/indexer/status"
+	log "github.com/sirupsen/logrus"
+	torrentdStatus "github.com/sp0x/torrentd/indexer/status"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func BindConfig() {
 	viper.AutomaticEnv()
-	_ = viper.BindEnv("firebase_project")
 	_ = viper.BindEnv("firebase_credentials_file")
 }
 
@@ -26,9 +28,6 @@ type FirebaseConfig struct {
 func GetFirebaseConfig() (*FirebaseConfig, error) {
 	project := viper.GetString("GOOGLE_CLOUD_PROJECT")
 	creds := viper.GetString("GOOGLE_APPLICATION_CREDENTIALS")
-	if creds == "" {
-		return nil, errors.New("no firebase credentials found")
-	}
 	return &FirebaseConfig{
 		Project:     project,
 		Credentials: creds,
@@ -71,7 +70,7 @@ func initialize() {
 	BindConfig()
 	fb, err := NewFirebaseFromEnv()
 	if err != nil {
-		fmt.Printf("error initializing firestore: %v", err)
+		fmt.Printf("error initializing firestore: %v\n", err)
 		//os.Exit(1)
 	}
 	firebase = fb
@@ -79,11 +78,49 @@ func initialize() {
 
 func NonErrorStatusReceived(ctx context.Context, m PubSubMessage) error {
 	initialize()
-	message := status.ScrapeSchemeMessage{}
+	message := torrentdStatus.ScrapeSchemeMessage{}
 	err := json.Unmarshal(m.Data, &message)
 	if err != nil {
 		return err
 	}
 	fmt.Print(spew.Sdump(message))
-	return nil
+	err = storeStatus(ctx, &message)
+	if err != nil {
+		log.Error(err)
+	}
+	return err
+}
+
+func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessage) error {
+	var err error
+	if firebase == nil {
+		return errors.New("firebase not initialized")
+	}
+	schemes := firebase.Collection("schemes")
+	schemeDoc := schemes.Doc(getSchemeKey(message))
+	_, err = schemeDoc.Create(ctx, message)
+	if err != nil && status.Code(err) == codes.AlreadyExists {
+		existing, err := schemeDoc.Get(ctx)
+		if err != nil {
+			return err
+		}
+		var existingScheme torrentdStatus.ScrapeSchemeMessage
+		err = existing.DataTo(&existingScheme)
+		if err != nil {
+			return err
+		}
+		existingScheme.ResultsFound += message.ResultsFound
+		existingScheme.Code = message.Code
+		_, err = schemeDoc.Set(ctx, &existing)
+		return err
+	}
+	return err
+}
+
+func getSchemeKey(message *torrentdStatus.ScrapeSchemeMessage) string {
+	if message.SchemeVersion != "" {
+		return fmt.Sprintf("%s@%s", message.Site, message.SchemeVersion)
+	} else {
+		return message.Site
+	}
 }
