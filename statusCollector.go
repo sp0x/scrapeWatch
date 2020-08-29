@@ -3,8 +3,11 @@ package scrapeWatch
 import (
 	"cloud.google.com/go/firestore"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/sp0x/torrentd/indexer/status"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
 )
@@ -14,9 +17,6 @@ func BindConfig() {
 	_ = viper.BindEnv("firebase_project")
 	_ = viper.BindEnv("firebase_credentials_file")
 }
-
-const schemeTopic = "scrapescheme"
-const schemeErrorTopic = "scheme.topic"
 
 type FirebaseConfig struct {
 	Project     string
@@ -77,10 +77,13 @@ func initialize() {
 	firebase = fb
 }
 
-// HelloPubSub consumes a Pub/Sub message.
 func NonErrorStatusReceived(ctx context.Context, m PubSubMessage) error {
-	name := string(m.Data) // Automatically decoded from base64.
 	initialize()
-	fmt.Printf(name)
+	message := status.ScrapeSchemeMessage{}
+	err := json.Unmarshal(m.Data, &message)
+	if err != nil {
+		return err
+	}
+	fmt.Print(spew.Sdump(message))
 	return nil
 }
