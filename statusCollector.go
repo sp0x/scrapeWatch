@@ -10,8 +10,6 @@ import (
 	torrentdStatus "github.com/sp0x/torrentd/indexer/status"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func BindConfig() {
@@ -102,31 +100,20 @@ func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessag
 	schemes := firebase.Collection("schemes")
 	schemeKey := getSchemeKey(message)
 	schemeDoc := schemes.Doc(schemeKey)
-	_, err = schemeDoc.Create(ctx, message)
-
-	if err != nil && status.Code(err) == codes.AlreadyExists {
-		existing, err := schemeDoc.Get(ctx)
-		if err != nil {
-			return err
-		}
-		var existingScheme torrentdStatus.ScrapeSchemeMessage
-		err = existing.DataTo(&existingScheme)
-		if err != nil {
-			return err
-		}
-		existingScheme.ResultsFound += message.ResultsFound
-		existingScheme.Code = message.Code
-		_, err = schemeDoc.Set(ctx, &existing)
-		if err != nil {
-			log.Debugf("Updated existing document %v.", schemeKey)
-		}
-		return err
-	} else if err != nil {
+	_, err = schemeDoc.Set(ctx, serializeSchemeStatus(message))
+	if err != nil {
 		return err
 	}
-	log.Debugf("Created new document %v.", schemeKey)
-
+	log.Debugf("written document %v.", schemeKey)
 	return err
+}
+
+func serializeSchemeStatus(message *torrentdStatus.ScrapeSchemeMessage) map[string]interface{} {
+	return map[string]interface{}{
+		"code":    message.Code,
+		"site":    message.Site,
+		"results": firestore.Increment(message.ResultsFound),
+	}
 }
 
 func getSchemeKey(message *torrentdStatus.ScrapeSchemeMessage) string {
