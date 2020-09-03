@@ -14,7 +14,6 @@ import (
 
 func BindConfig() {
 	viper.AutomaticEnv()
-	_ = viper.BindEnv("firebase_credentials_file")
 	_ = viper.BindEnv("verbose")
 }
 
@@ -73,7 +72,7 @@ func initialize() {
 	fb, err := NewFirebaseFromEnv()
 	if err != nil {
 		fmt.Printf("error initializing firestore: %v\n", err)
-		//os.Exit(1)
+		os.Exit(1)
 	}
 	firebase = fb
 }
