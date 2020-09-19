@@ -10,6 +10,7 @@ import (
 	torrentdStatus "github.com/sp0x/torrentd/indexer/status"
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
+	"os"
 )
 
 func BindConfig() {

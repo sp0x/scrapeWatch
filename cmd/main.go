@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"scrapeWatch"
+	"github.com/sp0x/scrapeWatch"
 )
 
 func main() {
-	scrapeWatch.NonErrorStatusReceived(context.Background(), scrapeWatch.PubSubMessage{Data: []byte("testing")})
+	_ = scrapeWatch.NonErrorStatusReceived(context.Background(), scrapeWatch.PubSubMessage{Data: []byte("testing")})
 }
