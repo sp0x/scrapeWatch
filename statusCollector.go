@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/api/option"
 	"os"
+	"time"
 )
 
 func BindConfig() {
@@ -110,9 +111,10 @@ func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessag
 
 func serializeSchemeStatus(message *torrentdStatus.ScrapeSchemeMessage) map[string]interface{} {
 	return map[string]interface{}{
-		"code":    message.Code,
-		"site":    message.Site,
-		"results": firestore.Increment(message.ResultsFound),
+		"code":        message.Code,
+		"site":        message.Site,
+		"results":     firestore.Increment(message.ResultsFound),
+		"lastUpdated": time.Now(),
 	}
 }
 
