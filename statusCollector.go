@@ -103,12 +103,18 @@ func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessag
 	schemeKey := getSchemeKey(message)
 	schemeDoc := schemes.Doc(schemeKey)
 	contents := serializeSchemeStatus(message)
-	log.Debug("Status being stored: %s", spew.Sdump(contents))
+	log.Debugf("Status being stored: %s", spew.Sdump(contents))
+	//_, err = schemeDoc.Set(ctx, contents)
 	_, err = schemeDoc.Set(ctx, contents)
 	if err != nil {
 		return err
 	}
-	log.Debugf("written document %v.", schemeKey)
+	_, err = schemeDoc.Update(ctx, []firestore.Update{
+		{Path: "results", Value: firestore.Increment(message.ResultsFound)},
+	})
+	if err != nil {
+		return err
+	}
 	return err
 }
 
@@ -116,7 +122,6 @@ func serializeSchemeStatus(message *torrentdStatus.ScrapeSchemeMessage) map[stri
 	return map[string]interface{}{
 		"code":        message.Code,
 		"site":        message.Site,
-		"results":     firestore.Increment(message.ResultsFound),
 		"lastUpdated": time.Now(),
 	}
 }
