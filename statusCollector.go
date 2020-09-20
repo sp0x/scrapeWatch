@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 	torrentdStatus "github.com/sp0x/torrentd/indexer/status"
 	"github.com/spf13/viper"
@@ -101,7 +102,9 @@ func storeStatus(ctx context.Context, message *torrentdStatus.ScrapeSchemeMessag
 	schemes := firebase.Collection("schemes")
 	schemeKey := getSchemeKey(message)
 	schemeDoc := schemes.Doc(schemeKey)
-	_, err = schemeDoc.Set(ctx, serializeSchemeStatus(message))
+	contents := serializeSchemeStatus(message)
+	log.Debug("Status being stored: %s", spew.Sdump(contents))
+	_, err = schemeDoc.Set(ctx, contents)
 	if err != nil {
 		return err
 	}
